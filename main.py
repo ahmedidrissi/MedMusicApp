@@ -35,7 +35,7 @@ from kivy.core.audio import SoundLoader
 from kivymd.uix.recycleview import MDRecycleView
 
 about_us = '''Hey ! I'm IDRISSI Ahmed a student engineer at ENSIAS Rabat.\n
-I'm made this app using Python and KivyMD. It allows you to add albums from your phone storage, \
+I made this app using Python and KivyMD. It allows you to add albums from your phone storage, \
 create your own playlists, play music and convert YouTube music to mp3 format. \n
 You can find the code source in my GitHub account. Enjoy it! \n'''
 
