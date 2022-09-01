@@ -1,4 +1,31 @@
-#:kivy 2.1.0
+#:kivy 2.0.0
+#:import Clock kivy.clock.Clock
+#-------------------------------------------------------------------------------------------------------
+<Album>
+    size_hint_y: None
+    height: dp(70)
+    md_bg_color: app.theme_cls.bg_dark
+    radius: 5
+    elevation: 4
+    title: ''
+    album_image: ''
+    songs_number: ''
+
+    TwoLineAvatarIconListItem:
+        text: f"[b]{root.title}[/b]"
+        secondary_text: f"[size=12sp]Album • {root.songs_number} songs[/size]"
+        pos_hint: {'center_y': .5}
+        divider: None
+        on_release: app.open_album(root.title)
+        
+        ImageLeftWidget:
+            source: root.album_image
+            radius: 5
+            on_release: app.open_album(root.title)
+
+        IconRightWidget:
+            icon: "dots-vertical"
+            on_release: app.show_album_bottom_sheet(root.title)   
 #-------------------------------------------------------------------------------------------------------
 <Playlist>
     size_hint_y: None
@@ -6,10 +33,13 @@
     md_bg_color: app.theme_cls.bg_dark
     radius: 5
     elevation: 4
+    title: ''
+    playlist_image: ''
+    songs_number: ''
 
     TwoLineAvatarIconListItem:
-        text: f"[b] {root.title} [/b]"
-        secondary_text: "0 songs"
+        text: f"[b]{root.title}[/b]"
+        secondary_text: f"[size=12sp]Playlist • {root.songs_number} songs[/size]"
         pos_hint: {'center_y': .5}
         divider: None
         on_release: app.open_playlist(root.title)
@@ -34,7 +64,6 @@
         hint_text: "Playlist name"
         mode: "rectangle"
         max_text_length: 20
-        helper_text: "Enter your playlist name please"
 #-------------------------------------------------------------------------------------------------------
 <Rename_Playlist_Dialog>
     orientation: "vertical"
@@ -47,28 +76,27 @@
         hint_text: "Playlist name"
         mode: "rectangle"
         max_text_length: 20
-        helper_text: "Enter your playlist name please"
 #-------------------------------------------------------------------------------------------------------
 <Song>
-    size_hint_y: None
-    height: dp(50)
     md_bg_color: app.theme_cls.bg_dark
     radius: 5
     elevation: 4
+    title: ''
+    path: ''
 
     OneLineAvatarIconListItem:
-        text: root.title.split("\\")[-1][:-4]
+        text: root.title
         pos_hint: {'center_y': .5}
         divider: None
-        on_release: app.set_song(root.title)
+        on_release: app.set_song(root.path)
         
         IconLeftWidget:
             icon: "adjust"
-            on_release: app.set_song(root.title)
+            on_release: app.set_song(root.path)
 
         IconRightWidget:
             icon: "dots-vertical"
-            on_release: app.show_song_bottom_sheet(root.title)
+            on_release: app.show_song_bottom_sheet(root.path)
             disabled: True if app.first_screen == "AlbumsScreen" else False
 #-------------------------------------------------------------------------------------------------------
 <MusicPlayer>
@@ -92,8 +120,6 @@
             bold: True
             theme_text_color: "Custom"
             text_color: 1,1,1,1
-            size_hint: 1, None
-            height: dp(64)
             halign: "left"
             pos_hint: {"center_y": .5}
 
@@ -125,33 +151,29 @@
     padding: dp(6)
 
     MDBoxLayout:
-        adaptive_size: True
-        padding: dp(8)
-        spacing: dp(8)
-        pos_hint: {"center_x": .5, "center_y": .5}
-
         MDIconButton:
             icon: "chevron-down"
-            pos_hint: {"center_x": .5, "center_y": 0.1}
+            size_hint: 1, 1
+            pos_hint: {"center_x": .5, "center_y": .5}
+            valign: "center"
             theme_icon_color: "Custom"
             icon_color: 1,1,1,1
             on_release: app.show_music_player()
-    MDSeparator:
-        height: dp(2)
+
     MDLabel:
         text: app.running_song_title
         bold: True
         theme_text_color: "Custom"
         text_color: 1,1,1,1
         size_hint: 1, None
-        height: dp(64)
+        height: dp(60)
         halign: "center"
         pos_hint: {"center_y": .5}
 
     MDProgressBar:
         id: progress_bar
         value: app.progress_bar_value
-        color: (1, 1, 1, 1)
+        color: 1, 1, 1, 1
         size_hint: 1, None
         height: dp(3)
 
@@ -165,14 +187,17 @@
             halign: "left"
             valign: "bottom"
             font_size: sp(12)
-            color: 1,1,1,1
+            theme_text_color: "Custom"
+            text_color: 1,1,1,1
 
         MDLabel:
             text: app.right_time
             halign: "right"
             valign: "bottom"
             font_size: sp(12)
-            color: 1,1,1,1
+            theme_text_color: "Custom"
+            text_color: 1,1,1,1
+
 
     MDBoxLayout:
         adaptive_size: True
@@ -210,73 +235,37 @@
         MDIconButton:
             icon: app.repeat_icon
             pos_hint: {"center_x": .5, "center_y": .5}
-            #on_release: app.repeat()
+            on_release: app.repeat()
             theme_icon_color: "Custom"
             icon_color: 1,1,1,1
 #-------------------------------------------------------------------------------------------------------
-<Album>
-    size_hint_y: None
-    height: dp(70)
-    md_bg_color: app.theme_cls.bg_dark
-    radius: 5
-    elevation: 4
-
-    TwoLineAvatarIconListItem:
-        text: f"[b] {root.title} [/b]"
-        secondary_text: "Unknown artist"
-        pos_hint: {'center_y': .5}
-        divider: None
-        on_release: app.open_album(root.title)
-        
-        ImageLeftWidget:
-            source: root.album_image
-            radius: 5
-            on_release: app.open_album(root.title)
-
-        IconRightWidget:
-            icon: "dots-vertical"
-            on_release: app.show_album_bottom_sheet(root.title)   
-#-------------------------------------------------------------------------------------------------------
-<Add_Album_Dialog>
-    orientation: "vertical"
-    spacing: "12dp"
-    size_hint_y: None
-    height: dp(50)
-
-    MDTextField:
-        id: album_name_input
-        hint_text: "Album name"
-        mode: "rectangle"
-        max_text_length: 15
-        helper_text: "Enter your album name please"
-#-------------------------------------------------------------------------------------------------------
-<Item>
+<Add_Song_Dialog>
     on_release: app.choose_songs(root.text)
     ImageLeftWidget:
         source: root.source
         radius: 5
 #-------------------------------------------------------------------------------------------------------
-<ItemConfirm>
+<Choose_Song_Dialog>
 
     CheckboxLeftWidget:
         on_active: app.checkbox_click(self, self.active, root.path)
 #-------------------------------------------------------------------------------------------------------
 <Title>
-    size_hint_y: None
-    height: dp(50)
     md_bg_color: app.theme_cls.bg_dark
     radius: 5
     elevation: 4
+    title: ''
+    path: ''
 
     OneLineIconListItem:
-        text: root.title.split("\\")[-1][:-4]
+        text: root.title
         pos_hint: {'center_y': .5}
         divider: None
-        on_release: app.set_song(root.title)
+        on_release: app.set_song(root.path)
         
         IconLeftWidget:
             icon: "adjust"
-            on_release: app.set_song(root.title)
+            on_release: app.set_song(root.path)
 #-------------------------------------------------------------------------------------------------------
 <MDFillRoundFlatButton>
     font_size: sp(18)
@@ -285,20 +274,224 @@
     text_color: 1,1,1,1
 #-----------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------
+<AlbumsScreen>:
+    recycle_view: recycle_view
+    items_box: items_box
+
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(64)
+
+        MDGridLayout:
+            cols: 1
+            adaptive_height: True
+            padding: dp(12)
+            spacing: dp(12)
+
+            MDRoundFlatIconButton:
+                icon: "plus-box-outline"
+                text: "New album"
+                size_hint: 1,1
+                line_color: 0,0,0,0
+                halign: "left"
+                theme_text_color: "Custom"
+                text_color: app.theme_cls.opposite_bg_normal
+                theme_icon_color: "Custom"
+                icon_color: app.theme_cls.opposite_bg_normal
+                radius: 10, 0
+                on_release: app.request_user_permissions()
+
+        MDRecycleView:
+            id: recycle_view
+            data: app.current_data
+            viewclass: "Album"
+            md_bg_color: app.theme_cls.primary_color
+            RecycleBoxLayout:
+                id: items_box
+                orientation: "vertical"
+                default_size: None, dp(70)
+                default_size_hint: 1, None
+                size_hint: 1, None
+                height: self.minimum_height
+                spacing: dp(8)
+                padding: dp(12), dp(2), dp(12), dp(12)
+        
+        MDBoxLayout:
+            size_hint: 1, None
+            height: dp(67) if app.expansed_music_player == False else dp(180)
+#-------------------------------------------------------------------------------------------------------
+<PlaylistsScreen>:
+    recycle_view: recycle_view
+    items_box: items_box
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(64)
+
+        MDGridLayout:
+            cols: 1
+            adaptive_height: True
+            padding: dp(12)
+
+            MDRoundFlatIconButton:
+                icon: "plus-box-outline"
+                text: "New playlist"
+                line_color: 0,0,0,0
+                halign: "left"
+                theme_text_color: "Custom"
+                text_color: app.theme_cls.opposite_bg_normal
+                theme_icon_color: "Custom"
+                icon_color: app.theme_cls.opposite_bg_normal
+                radius: 10, 0
+                on_release: app.add_playlist()
+        
+        MDRecycleView:
+            id: recycle_view
+            data: app.current_data
+            viewclass: "Playlist"
+            md_bg_color: app.theme_cls.primary_color
+            RecycleBoxLayout:
+                id: items_box
+                orientation: "vertical"
+                default_size: None, dp(70)
+                default_size_hint: 1, None
+                size_hint: 1, None
+                height: self.minimum_height
+                spacing: dp(8)
+                padding: dp(12), dp(2), dp(12), dp(12)
+
+        MDBoxLayout:
+            size_hint: 1, None
+            height: dp(67) if app.expansed_music_player == False else dp(180)
+#-------------------------------------------------------------------------------------------------------
+<SongsScreen>:
+    recycle_view: recycle_view
+    items_box: items_box
+
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(64)
+
+        MDBoxLayout:
+            orientation: "vertical"
+
+            MDGridLayout:
+                size_hint: 1, None
+                cols: 2
+                height: dp(150)
+                padding: dp(12)
+                spacing: dp(8)
+                                        
+                FitImage:
+                    id: playlist_image_container
+                    source: app.image
+                    size_hint_y: 1
+                    radius: 10
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    padding: dp(12)
+                    MDLabel:
+                        text: app.current_playlist
+                        bold: True
+                        pos_hint: {"center_y":.5}
+                    MDLabel:
+                        text:
+                            f"Playlist • {app.songs_number} songs" \
+                            if app.first_screen == "PlaylistsScreen" \
+                            else f"Album • {app.songs_number} songs"
+                        font_size: sp(10)
+                        pos_hint: {"center_y":.5}
+                    MDBoxLayout:
+                        MDIconButton:
+                            icon: "pencil-outline"
+                            pos_hint: {"center_x":.5, "center_y":.5}
+                            on_release: app.rename_playlist()
+                            disabled: True if app.first_screen == "AlbumsScreen" else False
+                        MDIconButton:
+                            icon: "dots-vertical"
+                            pos_hint: {"center_x":.5, "center_y":.5}
+                            on_release:
+                                app.show_album_bottom_sheet(app.current_playlist) \
+                                if app.first_screen == "AlbumsScreen" \
+                                else app.show_playlist_bottom_sheet(app.current_playlist)
+            MDRecycleView:
+                id: recycle_view
+                data: app.current_data
+                viewclass: "Song"
+                md_bg_color: app.theme_cls.primary_color
+                RecycleBoxLayout:
+                    id: items_box
+                    orientation: "vertical"
+                    default_size: None, dp(50)
+                    default_size_hint: 1, None
+                    size_hint: 1, None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    padding: dp(12), dp(2), dp(12), dp(12)
+
+        MDBoxLayout:
+            size_hint: 1, None
+            height: dp(67) if app.expansed_music_player == False else dp(180)
+#------------------------------------------------------------------------------------------------------------------------------
+<TitlesScreen>:
+    recycle_view: recycle_view
+    items_box: items_box
+
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(64)
+
+        MDBoxLayout:
+            orientation: "vertical"
+
+            MDRecycleView:
+                id: recycle_view
+                data: app.current_data
+                viewclass: "Title"
+                md_bg_color: app.theme_cls.primary_color
+                RecycleBoxLayout:
+                    id: items_box
+                    orientation: "vertical"
+                    default_size: None, dp(50)
+                    default_size_hint: 1, None
+                    size_hint: 1, None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    padding: dp(12)
+        
+        MDBoxLayout:
+            size_hint: 1, None
+            height: dp(67) if app.expansed_music_player == False else dp(180)
+#------------------------------------------------------------------------------------------------------------------------------
 MDScreen:
     MDBoxLayout:
         orientation: 'vertical'
         MDTopAppBar:
-            md_bg_color: app.bg_color
-            specific_text_color: app.text_color
+            md_bg_color: app.theme_cls.primary_color
+            specific_text_color: 1,1,1,1
             title: app.toolbar_title
+            anchor_title: "left"
+            type_height: "small"
             use_overflow: True
             elevation: 10
             left_action_items: [["arrow-left", lambda x: app.back(app.root.ids.screen_manager.current), "Back"]]
             right_action_items: 
                 [
                 ["theme-light-dark", lambda x: app.switch_theme(), "Theme"],
-                ["dots-vertical", lambda x: app.open_settings(x), "Settings"]
+                ["dots-vertical", lambda x: app.open_settings(), "Settings"]
                 ]
         MDLabel:
 
@@ -306,7 +499,6 @@ MDScreen:
             id: music_player
             size_hint: 1, None
             height: dp(67)
-            #adaptive_height: True
 
     MDScreenManager: 
         id: screen_manager
@@ -318,22 +510,25 @@ MDScreen:
                 orientation: 'vertical'
 
                 MDTopAppBar:
-                    md_bg_color: app.bg_color
-                    specific_text_color: app.text_color
+                    md_bg_color: app.theme_cls.primary_color
+                    specific_text_color: 1,1,1,1
                     title: "MedMusic"
+                    anchor_title: "left"
+                    type_height: "small"
+                    use_overflow: True
                     elevation: 10
                     left_action_items: [["play-circle-outline"]]
                     right_action_items: 
                         [
                         ["theme-light-dark", lambda x: app.switch_theme(), "Theme"],
-                        ["dots-vertical", lambda x: app.open_settings(x), "Settings"]
+                        ["dots-vertical", lambda x: app.open_settings(), "Settings"]
                         ]
 
                 MDGridLayout:
                     cols: 1
                     size_hint: 1, .4
                     FitImage:
-                        source: "Images/home_screen_wallpaper.jpg"
+                        source: "data/Images/home_screen_wallpaper.jpg"
                         size_hint_y: 1
 
                 MDGridLayout:
@@ -355,6 +550,7 @@ MDScreen:
                             app.toolbar_title = "Playlists"
                             app.first_screen = "PlaylistsScreen"
                             app.show_music_player()
+                            Clock.schedule_once(app.create_playlists, 1)
 
                     MDFillRoundFlatButton:
                         text: "Albums"
@@ -365,6 +561,7 @@ MDScreen:
                             app.toolbar_title = "Albums"
                             app.first_screen = "AlbumsScreen"
                             app.show_music_player()
+                            Clock.schedule_once(app.create_albums, 1)
 
                     MDFillRoundFlatButton:
                         text: "Titles"
@@ -396,181 +593,18 @@ MDScreen:
                             text: '© IDRISSI Ahmed 2022 / All rights reserved'
                             font_size: sp(12)
                             halign: 'center'
-
-
-#---------------------------------------- PLAYLISTS SCREEN ---------------------------------------------
-        MDScreen:
-            name: "PlaylistsScreen"
-            id: playlists_screen
-
-            MDBoxLayout:
-                orientation: 'vertical'
-                
-                MDBoxLayout:
-                    size_hint_y: None
-                    height: dp(64)
-
-                ScrollView:
-                    MDGridLayout:
-                        cols: 1
-                        adaptive_height: True
-                        padding: dp(12)
-                        spacing: dp(12)
-
-                        MDRoundFlatIconButton:
-                            icon: "plus-box-outline"
-                            text: "New playlist"
-                            line_color: 0,0,0,0
-                            halign: "left"
-                            theme_text_color: "Custom"
-                            text_color: app.theme_cls.opposite_bg_normal
-                            theme_icon_color: "Custom"
-                            icon_color: app.theme_cls.opposite_bg_normal
-                            radius: 10, 0
-                            on_release: app.add_playlist()
-
-                        MDGridLayout:
-                            id: playlists_box
-                            cols: 1
-                            adaptive_height: True
-                            spacing: dp(12)
-
-                MDBoxLayout:
-                    size_hint: 1, None
-                    height: dp(67) if app.expansed_music_player == False else dp(180)
-
-#---------------------------------------- SONGS SCREEN ---------------------------------------------
-        MDScreen:
-            name: "SongsScreen"
-            orientation: 'vertical'
-
-            MDBoxLayout:
-                orientation: 'vertical'
-
-                MDBoxLayout:
-                    size_hint_y: None
-                    height: dp(64)
-
-                ScrollView:
-                    MDGridLayout:
-                        cols: 1
-                        adaptive_height: True
-                        padding: dp(12)
-                        spacing: dp(12)
-
-                        MDGridLayout:
-                            size_hint: 1, None
-                            cols: 2
-                            height: dp(150)
-                            spacing: dp(8)
-                                                    
-                            FitImage:
-                                id: playlist_image_container
-                                source: app.image
-                                size_hint_y: 1
-                                radius: 10
-
-                            MDBoxLayout:
-                                orientation: "vertical"
-                                padding: dp(12)
-                                MDLabel:
-                                    text: app.current_playlist
-                                    bold: True
-                                    pos_hint: {"center_y":.5}
-                                MDLabel:
-                                    text: f"Playlist • {app.songs_number} songs"
-                                    font_size: sp(10)
-                                    pos_hint: {"center_y":.5}
-                                MDBoxLayout:
-                                    MDIconButton:
-                                        icon: "pencil-outline"
-                                        pos_hint: {"center_x":.5, "center_y":.5}
-                                        on_release: app.rename_playlist()
-                                        disabled: True if app.first_screen == "AlbumsScreen" else False
-                                    MDIconButton:
-                                        icon: "dots-vertical"
-                                        pos_hint: {"center_x":.5, "center_y":.5}
-                                        on_release: app.show_playlist_bottom_sheet(app.current_playlist)
-                        MDBoxLayout:
-                            id: songs_container
-                            orientation: "vertical"
-                            adaptive_height: True
-                            spacing: dp(8)
-
-                MDBoxLayout:
-                    size_hint: 1, None
-                    height: dp(67) if app.expansed_music_player == False else dp(180)
-
 #------------------------------------------ ALBUMS SCREEN ----------------------------------------------
-        MDScreen:
+        AlbumsScreen:
             name: "AlbumsScreen"
-            id: albums_screen
-            MDBoxLayout:
-                orientation: 'vertical'
-
-                MDBoxLayout:
-                    size_hint_y: None
-                    height: dp(64)
-
-                ScrollView:
-                    MDGridLayout:
-                        cols: 1
-                        adaptive_height: True
-                        padding: dp(12)
-                        spacing: dp(12)
-
-                        MDRoundFlatIconButton:
-                            icon: "plus-box-outline"
-                            text: "New album"
-                            size_hint: 1,1
-                            line_color: 0,0,0,0
-                            halign: "left"
-                            theme_text_color: "Custom"
-                            text_color: app.theme_cls.opposite_bg_normal
-                            theme_icon_color: "Custom"
-                            icon_color: app.theme_cls.opposite_bg_normal
-                            radius: 10, 0
-                            on_release: app.open_albums_file_manager()
-
-                        MDBoxLayout:
-                            id: albums_box
-                            orientation: "vertical"
-                            adaptive_height: True
-                            spacing: dp(8)
-                
-                MDBoxLayout:
-                    size_hint: 1, None
-                    height: dp(67) if app.expansed_music_player == False else dp(180)
-
+#---------------------------------------- PLAYLISTS SCREEN ---------------------------------------------
+        PlaylistsScreen:
+            name: "PlaylistsScreen"
+#---------------------------------------- SONGS SCREEN ---------------------------------------------
+        SongsScreen:
+            name: "SongsScreen"
 #------------------------------------------ TITLES SCREEN ----------------------------------------------                                        
-        MDScreen:
-            name: "TitlesScreen"
-            id: titles_screen
-
-            MDBoxLayout:
-                orientation: 'vertical'
-
-                MDBoxLayout:
-                    size_hint_y: None
-                    height: dp(64)
-
-                ScrollView:
-                    MDGridLayout:
-                        cols: 1
-                        adaptive_height: True
-                        padding: dp(12)
-                        spacing: dp(12)
-
-                        MDBoxLayout:
-                            id: titles_box
-                            orientation: "vertical"
-                            adaptive_height: True
-                            spacing: dp(8)
-
-                MDBoxLayout:
-                    size_hint: 1, None
-                    height: dp(67) if app.expansed_music_player == False else dp(180)                        
-
+        TitlesScreen:
+            name: "TitlesScreen"                
 #------------------------------------------ CONVERTER SCREEN ----------------------------------------------       
         MDScreen:
             name: "ConverterScreen"
@@ -594,7 +628,7 @@ MDScreen:
                     MDTextField:
                         id: link_input
                         hint_text: 'Enter the URL :'
-                        text: "https://www.youtube.com/watch?v=XoX6zS5-jOY&list=PL6NdkXsPL07IOu1AZ2Y2lGNYfjDStyT6O&index=4"
+                        text: "https://www.youtube.com/watch?v=eEXEEuSLjEo&list=PL6NdkXsPL07IOu1AZ2Y2lGNYfjDStyT6O&index=12"
                         #"Ex: https://www.youtube.com/watch?v=..."
                         mode: "rectangle"
                         font_size: sp(14)

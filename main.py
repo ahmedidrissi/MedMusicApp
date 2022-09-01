@@ -2,160 +2,166 @@
 # Bug in kivymd.uix.dialog.dialog.MDDialog class
 #--------------------------------------------------------------------------------
 import os
-import shutil
 import glob
-from PIL import Image
-import time
-import mutagen
-from mutagen.wave import WAVE
 from mutagen.mp3 import MP3
 import webbrowser
 
-#from android.storage import primary_external_storage_path
-#primary_ext_storage = primary_external_storage_path()
-#from android.permissions import request_permissions, Permission
-#request_permissions([Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE])
-
-from kivy import utils
 from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.utils import get_color_from_hex
-from kivy.properties import StringProperty, ObjectProperty, ListProperty, BooleanProperty
+from kivy.utils import platform
+from kivy.properties import StringProperty, ObjectProperty, BooleanProperty, ListProperty
 
-from kivymd.uix.screenmanager import MDScreenManager
+from kivymd.uix.screen import MDScreen
+from kivy.uix.screenmanager import  Screen
 from kivymd.uix.behaviors import RoundedRectangularElevationBehavior
 from kivymd.uix.card import MDCard
-#from kivy.animation import Animation
-from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.toolbar import MDTopAppBar
-from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.snackbar import Snackbar
-from kivymd.uix.list import OneLineAvatarListItem, TwoLineAvatarListItem, OneLineAvatarIconListItem
-from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
+from kivymd.uix.list import OneLineAvatarListItem, OneLineAvatarIconListItem
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
-from kivymd.uix.progressbar import MDProgressBar
-from kivy.uix.boxlayout import BoxLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.bottomsheet import MDListBottomSheet
 from kivymd.uix.filemanager import MDFileManager
 
-from pygame import mixer
-mixer.init()
 from pytube import YouTube    
-from kivymd.toast import toast
-from kivy.config import Config
 from kivy.core.window import Window
 
 from kivy.storage.jsonstore import JsonStore
+from kivy.core.audio import SoundLoader
+from kivymd.uix.recycleview import MDRecycleView
 
-colors = {
-    "Purple": {
-        "50": "efe5fd",
-        "100": "d5bff9",
-        "200": "b894f6",
-        "300": "9a66f4",
-        "400": "803ff2",
-        "500": "6300ee",
-        "600": "5600e8",
-        "700": "4100e0",
-        "800": "2300db",
-        "900": "0000d6",
-        "A100": "B00020",
-        "A200": "FFFFFF",
-        "A400": "000000",
-        "A700": "121212",
-    },
-    "Teal": {
-        "50": "d4f6f2",
-        "100": "92e9dc",
-        "200": "03dac4",
-        "300": "00c7ab",
-        "400": "00b798",
-        "500": "00a885",
-        "600": "009a77",
-        "700": "008966",
-        "800": "007957",
-        "900": "005b39",
-        "A100": "bdedf0",
-        "A200": "97e2e8",
-        "A400": "6dcbd6",
-        "A700": "5b9ca3",
-    },
-    "Red": {
-        "50": "FFEBEE",
-        "100": "FFCDD2",
-        "200": "EF9A9A",
-        "300": "E57373",
-        "400": "EF5350",
-        "500": "F44336",
-        "600": "E53935",
-        "700": "D32F2F",
-        "800": "C62828",
-        "900": "B71C1C",
-        "A100": "FF8A80",
-        "A200": "FF5252",
-        "A400": "FF1744",
-        "A700": "D50000",
-    },
-    "Light": {
-        "StatusBar": "E0E0E0",
-        "AppBar": "F5F5F5",
-        "Background": "FAFAFA",
-        "CardsDialogs": "FFFFFF",
-        "FlatButtonDown": "cccccc",
-    },
-    "Dark": {
-        "StatusBar": "000000",
-        "AppBar": "212121",
-        "Background": "121212",
-        "CardsDialogs": "424242",
-        "FlatButtonDown": "999999",
-    }
-}
+about_us = '''Hey ! I'm IDRISSI Ahmed a student engineer at ENSIAS Rabat.\n
+I'm made this app using Python and KivyMD. It allows you to add albums from your phone storage, \
+create your own playlists, play music and convert YouTube music to mp3 format. \n
+You can find the code source in my GitHub account. Enjoy it! \n'''
 
-class Item(OneLineAvatarListItem):
+class AlbumsScreen(MDScreen):
+    recycle_view = ObjectProperty(None)
+    items_box = ObjectProperty(None)
+
+    def on_enter(self):
+        pass
+
+    def on_leave(self):
+        self.recycle_view.data = []
+
+class Album(MDCard, RoundedRectangularElevationBehavior):
+    title = StringProperty()
+    album_image = StringProperty()
+    songs_number = StringProperty()
+
+class PlaylistsScreen(MDScreen):
+    recycle_view = ObjectProperty(None)
+    items_box = ObjectProperty(None)
+
+    def on_enter(self):
+        pass
+
+    def on_leave(self):
+        self.recycle_view.data = []
+
+class Playlist(MDCard, RoundedRectangularElevationBehavior):
+    title = StringProperty()
+    playlist_image = StringProperty()
+    songs_number = StringProperty()
+
+class Add_Playlist_Dialog(MDBoxLayout):
+    pass
+
+class Rename_Playlist_Dialog(MDBoxLayout):
+    pass
+
+class SongsScreen(MDScreen):
+    recycle_view = ObjectProperty(None)
+    items_box = ObjectProperty(None)
+
+    def on_enter(self):
+        pass
+
+    def on_leave(self):
+        self.recycle_view.data = []
+    
+class Song(MDCard, RoundedRectangularElevationBehavior):
+    pass
+
+class Add_Song_Dialog(OneLineAvatarListItem):
     divider = None
     source = StringProperty()
 
-class ItemConfirm(OneLineAvatarIconListItem):
+class Choose_Song_Dialog(OneLineAvatarIconListItem):
     divider = None
     path = StringProperty()
+
+class TitlesScreen(MDScreen):
+    recycle_view = ObjectProperty(None)
+    items_box = ObjectProperty(None)
+
+    def on_enter(self):
+        pass
+
+    def on_leave(self):
+        self.recycle_view.data = []
+        
+class Title(MDCard, RoundedRectangularElevationBehavior):
+    title = StringProperty()
+    path = StringProperty()
+
+class MusicPlayer(MDCard):
+    pass
+
+class ExpansedMusicPlayer(MDCard):
+    pass
 
 class MedMusic(MDApp):
 
 #--------------------------------- GENERAL FUNCTIONS ----------------------------------
-    bg_color = ListProperty() 
-    text_color = ListProperty()
     toolbar_title = StringProperty() 
     image = StringProperty() 
     snackbar_text = ''
-    message_dialog = None
+    about_us_dialog = None
+    phone_number_dialog = None
     first_screen = StringProperty()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        Config.set('graphics', 'width', '330')
-        Config.set('graphics', 'height', '630')
-        Config.set('graphics', 'resizable', 0)
-        Config.write()
-        self.primary_ext_storage = "C:\\Users\\idris\\Desktop"
+        self.mplayer = MusicPlayerWindows()
+
+        if platform == "win":
+            self.primary_ext_storage = "C:\\Users\\idris\\Desktop"
+            self.current_working_dir = os.getcwd()
+        elif platform == "android":
+            from android.storage import primary_external_storage_path
+            self.primary_ext_storage = primary_external_storage_path()
+            self.current_working_dir = self.primary_ext_storage + "/Android/data"
+        else:
+            self.primary_ext_storage = "\\"
+            self.current_working_dir = os.getcwd()
+
         Window.bind(on_keyboard=self.events)
+
         self.albums_manager_open = False
-        self.images_manager_open = False
         self.albums_file_manager = MDFileManager(
             exit_manager=self.exit_albums_manager,
             select_path=self.add_album,
             preview=True,
         )
+
+        self.images_manager_open = False
         self.images_file_manager = MDFileManager(
             exit_manager=self.exit_images_manager,
             select_path=self.choose_image,
             preview=True,
         )
+
+    def request_user_permissions(self):
+        if platform == "android":
+            self.open_albums_file_manager()
+        else:
+            self.open_albums_file_manager()
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         '''Called when buttons are pressed on the mobile device.'''
@@ -163,43 +169,41 @@ class MedMusic(MDApp):
         if keyboard in (1001, 27):
             if self.albums_manager_open:
                 self.albums_file_manager.back()
-            if self.images_manager_open:
+            elif self.images_manager_open:
                 self.images_file_manager.back()
+        if keyboard == 27:
+            if self.root.ids.screen_manager.current == "HomeScreen":
+                MDApp.get_running_app().stop()
+                Window.close()
+            else:
+                if not self.images_manager_open and not self.albums_manager_open:
+                    self.back(self.root.ids.screen_manager.current)
         return True
 
     def build(self):
-        self.theme_cls.colors = colors
+        self.theme_cls.material_style = "M3"
         self.theme_cls.theme_style = "Light" 
-        self.theme_cls.primary_palette = "Purple"
+        self.theme_cls.primary_palette = "DeepPurple"
         self.theme_cls.accent_palette = "Teal"
         self.theme_cls.primary_hue = "500" 
-        self.theme_cls.accent_hue = "200"
-        self.bg_color = self.theme_cls.primary_color
-        self.text_color = get_color_from_hex("#FAFAFA")
-
+        self.theme_cls.theme_style_switch_animation = True
+        self.theme_cls.theme_style_switch_animation_duration = 0.8
         return Builder.load_file("main.kv")
 
     def switch_theme(self):
-        theme = self.theme_cls.theme_style
-        if theme == 'Light':
-            self.theme_cls.theme_style = 'Dark'
-            self.theme_cls.primary_hue = "200"
-            self.bg_color = get_color_from_hex("#212121")
-            self.text_color = self.theme_cls.primary_color
-        else:
-            self.theme_cls.theme_style = 'Light'
-            self.theme_cls.primary_hue = "500"
-            self.bg_color = self.theme_cls.primary_color
-            self.text_color = get_color_from_hex("#FAFAFA")
+        self.theme_cls.theme_style = (
+            "Dark" if self.theme_cls.theme_style == "Light" else "Light"
+        )
 
-    def open_settings(self, button):
+    def open_settings(self):
         bottom_sheet_menu = MDListBottomSheet() #radius=10, radius_from="top_right"
         data = {
             "About us": "badge-account-horizontal-outline",
+            "GitHub": "github",
             "LinkedIn": "linkedin",
             "Facebook": "facebook",
             "Instagram": "instagram",
-            "(+212)622406448": "whatsapp",
+            "WhatsApp": "whatsapp",
             
         }
         for item in data.items():
@@ -212,9 +216,17 @@ class MedMusic(MDApp):
         bottom_sheet_menu.open()        
 
     def settings_callback(self, item):
-        link = None
+        link = None 
         if item == "About us":
-            pass
+            if not self.about_us_dialog:
+                self.about_us_dialog = MDDialog(
+                    title="About us :",
+                    type="simple",
+                    text=about_us,
+                )
+            self.about_us_dialog.open()
+        elif item == "GitHub":
+            link = "https://github.com/ahmedidrissi/MedMusicApp"
         elif item == "LinkedIn":
             link = "https://www.linkedin.com/in/ahmed-idrissi-87508a249/"
         elif item == "Facebook":
@@ -222,11 +234,17 @@ class MedMusic(MDApp):
         elif item == "Instagram":
             link = "https://www.instagram.com/idrissi_ahmed02/"
         elif item == "WhatsApp":
-            pass
+            if not self.phone_number_dialog:
+                self.phone_number_dialog = MDDialog(
+                    title="WhatsApp :",
+                    type="simple",
+                    text="(+212)622406448 \n",
+                )
+            self.phone_number_dialog.open()
         try:
             webbrowser.open(link)
         except Exception as e:
-            print(str(e))
+            pass
 
     def open_snackbar(self):
         Snackbar(text=self.snackbar_text, 
@@ -246,36 +264,45 @@ class MedMusic(MDApp):
         self.exit_images_manager()
 
     def change_image_callback(self, *args):
-        if self.first_screen == "PlaylistsScreen":
-            json_file = JsonStore(f"Playlists/{self.current_playlist}.json")
+        if self.root.ids.screen_manager.current == "PlaylistsScreen" or self.first_screen == "PlaylistsScreen":
+            json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
             json_file.put("<image_key>", path=self.choosen_image, type="image")
-            self.root.ids.playlists_box.clear_widgets()
             self.create_playlists(1)
-        else:
-            json_file = JsonStore(f"Albums/{self.current_playlist}.json")
+        elif self.root.ids.screen_manager.current == "AlbumsScreen" or self.first_screen == "AlbumsScreen":
+            json_file = JsonStore(self.current_working_dir + f"\\Albums\\{self.current_playlist}.json")
             json_file.put("<image_key>", path=self.choosen_image, type="image")
             self.root.ids.albums_box.clear_widgets()
             self.create_albums(1)
+        if self.root.ids.screen_manager.current == "SongsScreen":
+            self.image = self.choosen_image
         
     def exit_images_manager(self, *args):
         self.images_manager_open = False
         self.images_file_manager.close()
 
     def on_start(self):
-        folders = os.listdir()
+        folders = os.listdir(self.current_working_dir)
+        if "com.medmusic" not in folders:
+            os.mkdir(self.current_working_dir + "\\com.medmusic")
+
+        self.current_working_dir += "\\com.medmusic"
+        folders = os.listdir(self.current_working_dir)
         if "Albums" not in folders:
-            os.mkdir("Albums")
+            os.mkdir(self.current_working_dir + "\\Albums")
         if "Playlists" not in folders:
-            os.mkdir("Playlists")
+            os.mkdir(self.current_working_dir + "\\Playlists")
         if "Titles" not in folders:
-            os.mkdir("Titles")
+            os.mkdir(self.current_working_dir + "\\Titles")
         if "Youtube" not in folders:
-            os.mkdir("Youtube")
-        Clock.schedule_once(self.create_playlists, 1)
-        Clock.schedule_once(self.create_albums, 1)
+            os.mkdir(self.current_working_dir + "\\Youtube")
+            
         self.collect_titles()
+     
+    def on_pause(self):
+        return True
 
     def back(self, screen):
+        self.current_data = []
         if screen == "PlaylistsScreen":
             self.root.ids.music_player.clear_widgets()
             self.root.ids.screen_manager.current = "HomeScreen"
@@ -286,15 +313,15 @@ class MedMusic(MDApp):
             if self.first_screen == "PlaylistsScreen":
                 self.toolbar_title = "Playlists"
                 self.songs_number = "0"
+                Clock.schedule_once(self.create_playlists, 1)
                 self.root.ids.screen_manager.current = "PlaylistsScreen"
                 self.root.ids.screen_manager.transition.direction = "right"
-                self.root.ids.songs_container.clear_widgets()
             else:
                 self.toolbar_title = "Albums"
                 self.songs_number = "0"
+                Clock.schedule_once(self.create_albums, 1)
                 self.root.ids.screen_manager.current = "AlbumsScreen"
                 self.root.ids.screen_manager.transition.direction = "right"
-                self.root.ids.songs_container.clear_widgets()
 
         elif screen == "AlbumsScreen":
             self.root.ids.music_player.clear_widgets()
@@ -306,7 +333,6 @@ class MedMusic(MDApp):
             self.root.ids.music_player.clear_widgets()
             self.root.ids.screen_manager.current = "HomeScreen"
             self.root.ids.screen_manager.transition.direction = "right"
-            self.root.ids.titles_box.clear_widgets()
             self.pause()
 
         elif screen == "ConverterScreen":
@@ -319,21 +345,20 @@ class MedMusic(MDApp):
     album_songs = []
 
     def create_albums(self, *args):
-        self.albums = os.listdir("Albums")
+        self.albums = os.listdir(self.current_working_dir + "\\Albums")
+        self.current_data = []
         for album_file in self.albums:
-            json_file = JsonStore(f"Albums/{album_file}")
-            self.root.ids.albums_box.add_widget(
-                Album(
-                    title = album_file[:-5],
-                    album_image = json_file.get("<image_key>")["path"],
-                )
-            )
+            json_file = JsonStore(self.current_working_dir + f"\\Albums\\{album_file}")
+            self.current_data.append({
+                'title': album_file[:-5],
+                'album_image': json_file.get("<image_key>")["path"],
+                'songs_number': json_file.get("<infos>")["songs_number"]
+                })
 
     def show_album_bottom_sheet(self, album):
         self.current_playlist = album
         bottom_sheet_menu = MDListBottomSheet() #radius=10, radius_from="top_right"
         data = {
-            "Play the album": "playlist-play",
             "Change the image": "image-edit-outline",
             "Remove the album": "trash-can-outline",
         }
@@ -347,23 +372,16 @@ class MedMusic(MDApp):
         bottom_sheet_menu.open()
 
     def album_bottom_sheet_callback(self, item):
-        if item == "Play the album":
-            self.running_playlist = self.current_playlist
-            self.running_songs = self.current_songs
-            self.running_song = self.running_songs[0]
-            self.running_song_title = self.running_song.split("\\")[-1][:-4]
-            audio = MP3(self.running_song)
-            self.song_length = audio.info.length 
-            self.play()
-        elif item == "Change the image":
+        if item == "Change the image":
             self.open_images_file_manager()
         elif item == "Remove the album":
             self.remove_album()
 
     def open_album(self, title):
         self.toolbar_title = ""
+        self.current_data = []
         self.current_playlist = title
-        album_file = JsonStore(f"Albums/{title}.json")
+        album_file = JsonStore(self.current_working_dir + f"\\Albums\\{title}.json")
         songs = album_file.find(type="song")
         self.current_songs = [song_tuple[1]["path"] for song_tuple in songs]
         self.songs_number = str(len(self.current_songs))
@@ -387,20 +405,22 @@ class MedMusic(MDApp):
     
     def add_album_callback(self, *args):
         if os.path.isdir(self.chosen_album):
-            self.album_songs = glob.glob(f"{self.chosen_album}/*.mp3") + glob.glob(f"{self.chosen_album}/*.wav")
+            self.album_songs = glob.glob(f"{self.chosen_album}\\*.mp3") # + glob.glob(f"{self.chosen_album}\\*.wav")
             if self.album_songs!=[]:
                 try:
                     album_title = self.chosen_album.split("\\")[-1]
-                    album_file = JsonStore(f"Albums/{album_title}.json")
-                    image = "Images\\default_image.jpg" 
-                    album_file.put("<image_key>", path=image, type="image")  
+                    album_file = JsonStore(self.current_working_dir + f"\\Albums\\{album_title}.json")
+                    image = "data\\Images\\default_image.jpg" 
+                    album_file.put("<image_key>", path=image, type="image", songs_number=len(self.album_songs))
+                    album_file.put("<infos>", songs_number=str(len(self.album_songs)))
                     for song in self.album_songs:
                         album_file.put(song.split("\\")[-1][:-4], path=song, type="song")
                     text = "Album added successfully"
                 except Exception as e:
-                    text = "Error"
+                    text = str(e)
+                    print(self.chosen_album)
+                    print(text)
                 finally:
-                    self.root.ids.albums_box.clear_widgets()
                     self.create_albums(1)
                     self.collect_titles()
                     self.snackbar_text = text
@@ -418,12 +438,18 @@ class MedMusic(MDApp):
 
     def remove_album(self):
         try:
-            os.remove(f"Albums/{self.current_playlist}.json")
+            os.remove(self.current_working_dir + f"\\Albums\\{self.current_playlist}.json")
             text = "Album removed successfully"
         except:
             text = "Error"
         finally:
-            self.root.ids.albums_box.clear_widgets()
+            if self.running_playlist == self.current_playlist:
+                self.running_playlist = ""
+                self.running_songs = []
+                self.stop()
+                self.root.ids.music_player.clear_widgets()
+                self.show_music_player()
+            self.back("SongsScreen")
             self.create_albums(1)
             self.collect_titles()
             self.snackbar_text = text
@@ -438,26 +464,25 @@ class MedMusic(MDApp):
     choosen_image = ""
 
     def create_playlists(self, *args):
-        self.playlists = os.listdir("Playlists")    
+        self.playlists = os.listdir(self.current_working_dir + "\\Playlists")   
         if self.playlists != []:
             self.running_playlist = self.playlists[0][:-5]
-            playlist_file = JsonStore(f"Playlists/{self.running_playlist}.json")
+            playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.running_playlist}.json")
             playlist_songs_tuples = playlist_file.find(type="song")
             self.running_songs = [song_tuple[1]["path"] for song_tuple in playlist_songs_tuples]
+            self.current_data = []
             for playlist_file in self.playlists:
-                json_file = JsonStore(f"Playlists/{playlist_file}")
-                self.root.ids.playlists_box.add_widget(
-                    Playlist(
-                        title = playlist_file[:-5],
-                        playlist_image = json_file.get("<image_key>")["path"]
-                    )
-                )
+                json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{playlist_file}")
+                self.current_data.append({
+                    'title': playlist_file[:-5],
+                    'playlist_image': json_file.get("<image_key>")["path"],
+                    'songs_number': json_file.get("<infos>")["songs_number"]
+                    })
         
     def show_playlist_bottom_sheet(self, playlist):
         self.current_playlist = playlist
         bottom_sheet_menu = MDListBottomSheet() #radius=10, radius_from="top_right"
         data = {
-            "Play the playlist": "playlist-play",
             "Add to the playlist": "playlist-plus",
             "Rename the playlist": "pencil-outline",
             "Change the image": "image-edit-outline",
@@ -473,15 +498,7 @@ class MedMusic(MDApp):
         bottom_sheet_menu.open()
 
     def playlist_bottom_sheet_callback(self, item):
-        if item == "Play the playlist":
-            self.running_playlist = self.current_playlist
-            self.running_songs = self.current_songs
-            self.running_song = self.running_songs[0]
-            self.running_song_title = self.running_song.split("\\")[-1][:-4]
-            audio = MP3(self.running_song)
-            self.song_length = audio.info.length 
-            self.play()
-        elif item == "Add to the playlist":
+        if item == "Add to the playlist":
             self.add_song()
         elif item == "Rename the playlist":
             self.rename_playlist()
@@ -492,8 +509,9 @@ class MedMusic(MDApp):
 
     def open_playlist(self, title):
         self.toolbar_title = ""
+        self.current_data = []
         self.current_playlist = title
-        playlist_file = JsonStore(f"Playlists/{title}.json")
+        playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{title}.json")
         songs = playlist_file.find(type="song")
         self.current_songs = [song_tuple[1]["path"] for song_tuple in songs]
         self.songs_number = str(len(self.current_songs))
@@ -534,9 +552,10 @@ class MedMusic(MDApp):
         self.add_playlist_dialog.content_cls.ids.playlist_name_input.text = ''
         if len(title) <= 20:
             try:
-                playlist_file = JsonStore(f"Playlists/{title}.json")
-                image = "Images\\default_image.jpg" 
+                playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{title}.json")
+                image = "data\\Images\\default_image.jpg" 
                 playlist_file.put("<image_key>", path=image, type="image")
+                playlist_file.put("<infos>", songs_number="0")
                 text = "Playlist added successfully"
             except FileExistsError as e:
                 text = "Playlist already existing"
@@ -547,7 +566,6 @@ class MedMusic(MDApp):
                 print(str(e))
             finally:
                 self.add_playlist_dialog.dismiss(force=True)
-                self.root.ids.playlists_box.clear_widgets()
                 self.create_playlists(1)
                 self.snackbar_text = text
                 self.open_snackbar()
@@ -557,12 +575,18 @@ class MedMusic(MDApp):
 
     def remove_playlist(self):
         try:
-            os.remove(f"Playlists/{self.current_playlist}.json")
+            os.remove(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
             text = "Playlist removed successfully"
         except:
             text = "Error"
         finally:
-            self.root.ids.playlists_box.clear_widgets()
+            if self.running_playlist == self.current_playlist:
+                self.running_playlist = ""
+                self.running_songs = []
+                self.stop()
+                self.root.ids.music_player.clear_widgets()
+                self.show_music_player()
+            self.back("SongsScreen")
             self.create_playlists(1)
             self.snackbar_text = text
             self.open_snackbar()
@@ -596,8 +620,8 @@ class MedMusic(MDApp):
         if len(new_title) <= 20:
             try:
                 os.rename(
-                    f"Playlists/{self.current_playlist}.json",
-                    f"Playlists/{new_title}.json"
+                    self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json",
+                    self.current_working_dir + f"\\Playlists\\{new_title}.json"
                     )
                 self.current_playlist = new_title
                 text = "Playlist renamed successfully"
@@ -605,7 +629,6 @@ class MedMusic(MDApp):
                 text = "Error"
             finally:
                 self.rename_playlist_dialog.dismiss(force=True)
-                self.root.ids.playlists_box.clear_widgets()
                 self.create_playlists(1)
                 self.snackbar_text = text
                 self.open_snackbar()
@@ -638,20 +661,22 @@ class MedMusic(MDApp):
     add_songs_dialog = None
     choose_songs_dialog = None
     
-    def create_list_songs(self, x):
-        for title in self.current_songs:
-            if os.path.isfile(title):
-                self.root.ids.songs_container.add_widget(
-                    Song(title=title)
-                )
+    current_data = ListProperty()
+
+    def create_list_songs(self, *args):
+        self.current_data = []
+        for song in self.current_songs:
+            if os.path.isfile(song):
+                self.current_data.append({
+                    'title': song.split("\\")[-1][:-4],
+                    'path' : song
+                    })
 
     def show_music_player(self):
         if self.running_songs !=[]:
             if self.running_song == '':
                 self.running_song = self.running_songs[0]
-                self.running_song_title = self.running_song.split("\\")[-1][:-4]
-                audio = MP3(self.running_song)
-                self.song_length = audio.info.length 
+                self.running_song_title = self.running_song.split("\\")[-1][:-4]  
             self.root.ids.music_player.clear_widgets()
             self.root.ids.music_player.height = dp(67)
             self.root.ids.music_player.add_widget(
@@ -659,21 +684,20 @@ class MedMusic(MDApp):
                 )
             self.expansed_music_player = False
         else:
-            albums = os.listdir("Albums")
+            albums = os.listdir(self.current_working_dir + "\\Albums")
             if albums == []:
+                self.root.ids.music_player.clear_widgets()
                 self.root.ids.music_player.add_widget(
                     MDLabel(text="No music found", bold=True, halign="center",
                         pos_hint= {"center_y": .5})
                     )
             else:
-                album_file = JsonStore(f"Albums/{albums[0]}")
+                album_file = JsonStore(self.current_working_dir + f"\\Albums\\{albums[0]}")
                 self.running_playlist = albums[0][:-5]
                 songs = album_file.find(type="song")
                 self.running_songs = [song_tuple[1]["path"] for song_tuple in songs]
                 self.running_song = self.running_songs[0]
                 self.running_song_title = self.running_song.split("\\")[-1][:-4]
-                audio = MP3(self.running_song)
-                self.song_length = audio.info.length 
                 self.root.ids.music_player.clear_widgets()
                 self.root.ids.music_player.height = dp(67)
                 self.root.ids.music_player.add_widget(
@@ -719,14 +743,14 @@ class MedMusic(MDApp):
 
     def add_song(self):
         if not self.add_songs_dialog:
-            self.albums = os.listdir("Albums")
+            self.albums = os.listdir(self.current_working_dir + "\\Albums")
             self.add_songs_dialog = MDDialog(
                 title="Add song :",
                 type="simple",
                 items=[
-                    Item(
+                    Add_Song_Dialog(
                         text = album_file[:-5],
-                        source = list(x[1] for x in JsonStore(f"Albums/{album_file}").find(type="image"))[0]["path"],
+                        source = list(x[1] for x in JsonStore(self.current_working_dir + f"\\Albums\\{album_file}").find(type="image"))[0]["path"],
                     ) for album_file in self.albums
                 ],
             )
@@ -736,8 +760,8 @@ class MedMusic(MDApp):
         self.add_songs_dialog.dismiss(force=True)
         self.add_songs_dialog = None
         if not self.choose_songs_dialog:
-            album_file = JsonStore(f"Albums/{album}.json")
-            playlist_file = JsonStore(f"Playlists/{self.current_playlist}.json")
+            album_file = JsonStore(self.current_working_dir + f"\\Albums\\{album}.json")
+            playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
             album_songs_generator = album_file.find(type="song")
             playlist_songs_generator = playlist_file.find(type="song")
             self.album_songs = [song_tuple[1]["path"] for song_tuple in album_songs_generator]
@@ -746,7 +770,7 @@ class MedMusic(MDApp):
                 title="Choose songs :",
                 type="confirmation",
                 items=[
-                    ItemConfirm(
+                    Choose_Song_Dialog(
                         text = title.split("\\")[-1],
                         path = title
                     ) for title in self.album_songs if title not in self.current_songs
@@ -778,11 +802,11 @@ class MedMusic(MDApp):
     def add_songs_callback(self, *args):
         self.current_songs += self.paths
         self.current_songs.sort()
-        playlist_file = JsonStore(f"Playlists/{self.current_playlist}.json")
+        playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
         for song in self.paths:
             playlist_file.put(song.split("\\")[-1][:-4], path=song, type="song")
-        self.root.ids.songs_container.clear_widgets()
         self.songs_number = str(len(self.current_songs))
+        playlist_file.put("<infos>", songs_number=self.songs_number)
         self.create_list_songs(1)
         self.choose_songs_dialog.dismiss(force=True)
         self.choose_songs_dialog = None
@@ -790,22 +814,34 @@ class MedMusic(MDApp):
 
     def remove_song(self, x):
         self.current_songs.remove(self.current_song)
-        playlist_file = JsonStore(f"Playlists/{self.current_playlist}.json")
+        playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
         playlist_file.delete(self.current_song.split("\\")[-1][:-4])
         self.songs_number = str(len(self.current_songs))
-        self.root.ids.songs_container.clear_widgets()
+        playlist_file.put("<infos>", songs_number=self.songs_number)
         self.create_list_songs(1)
 
     def set_song(self, song):
-        self.running_playlist = self.current_playlist
-        self.running_songs = self.current_songs
-        self.running_song = song
-        self.running_song_title = self.running_song.split("\\")[-1][:-4]
-        self.play()
+        try:
+            self.mplayer.stop()
+            self.mplayer.unload()
+            self.running_playlist = self.current_playlist
+            self.running_songs = self.current_songs
+            self.running_song = song
+            self.running_song_title = self.running_song.split("\\")[-1][:-4]
+            Clock.schedule_once(self.play, 1)
+        except Exception as e:
+            self.snackbar_text = str(e)
+            self.open_snackbar()
 
-    def update_progress_bar(self, x):
+    def update_progress_bar(self, *args):
         if self.progress_bar_value < 100:
-            self.progress_bar_value += 100/self.song_length
+            try:
+                self.progress_bar_value += 100/self.song_length
+            except Exception as e:
+                self.snackbar_text = str(e)
+                self.open_snackbar()
+                Clock.unschedule(self.update_progress_bar)
+                Clock.unschedule(self.update_left_time)
         else:
             self.next()
 
@@ -821,7 +857,7 @@ class MedMusic(MDApp):
         else:
             self.right_time = f"{minutes}:{seconds}"
 
-    def update_left_time(self, x):
+    def update_left_time(self, *args):
         self.current_time = self.current_time + 1
         minutes = int(self.current_time/60)
         seconds = int(self.current_time%60)
@@ -833,70 +869,80 @@ class MedMusic(MDApp):
             self.left_time = f"0{minutes}:{seconds}"
         else:
             self.left_time = f"{minutes}:{seconds}"
-
-    def play(self):
-        self.play_pause_icon = "pause"
-        audio = MP3(self.running_song)
-        self.song_length = audio.info.length
-        self.progress_bar_value = 0
-        self.current_time = 0
-        self.update_right_time()
-        Clock.unschedule(self.update_progress_bar)
-        Clock.unschedule(self.update_left_time)
-        mixer.music.load(self.running_song)
-        mixer.music.play()
-        Clock.schedule_interval(self.update_progress_bar, 1)
-        Clock.schedule_interval(self.update_left_time, 1)
+    
+    def play(self, *args):
+        try:
+            self.play_pause_icon = "pause"
+            Clock.unschedule(self.update_progress_bar)
+            Clock.unschedule(self.update_left_time)
+            self.progress_bar_value = 0
+            self.current_time = 0
+            self.mplayer.load(self.running_song)
+            self.song_length = self.mplayer.play()
+            self.update_right_time()
+            Clock.schedule_interval(self.update_progress_bar, 1)
+            Clock.schedule_interval(self.update_left_time, 1)
+        except Exception as e:
+            self.snackbar_text = str(e)
+            file = open(self.current_working_dir + "\\errors.txt", "a")
+            file.write(str(e)+"\n")
+            self.open_snackbar()
     
     def pause(self):
-        self.play_pause_icon = "play"
-        self.pause_pressed = True
-        mixer.music.pause()
-        Clock.unschedule(self.update_progress_bar)
-        Clock.unschedule(self.update_left_time)
+        try:
+            self.play_pause_icon = "play"
+            self.pause_pressed = True
+            self.mplayer.stop()
+        except Exception as e:
+            self.snackbar_text = str(e)
+            self.open_snackbar()
+        finally:
+            Clock.unschedule(self.update_progress_bar)
+            Clock.unschedule(self.update_left_time)
+
+    def unpause(self):
+        try:
+            self.pause_pressed = False
+            self.play_pause_icon = "pause"
+            self.mplayer.play()
+            self.mplayer.seek(self.current_time)
+            Clock.schedule_interval(self.update_progress_bar, 1)
+            Clock.schedule_interval(self.update_left_time, 1)
+        except Exception as e:
+            self.snackbar_text = str(e)
+            self.open_snackbar()
 
     def play_pause(self):
         if self.play_pause_icon == "play":
-            self.play_pause_icon = "pause"
             if self.pause_pressed:
-                mixer.music.unpause()
-                Clock.schedule_interval(self.update_progress_bar, 1)
-                Clock.schedule_interval(self.update_left_time, 1)
-                self.pause_pressed = False
+                self.unpause()
             else:
-                self.play()       
+                Clock.schedule_once(self.play, 1)      
         else:
             self.pause()
         
     def stop(self):
-        mixer.music.stop()
-        self.progress_bar_value = 0
-        self.current_time = 0
-        Clock.unschedule(self.update_progress_bar)
-        Clock.unschedule(self.update_left_time)
-        self.running_song = ''
-        self.running_song_title = ''
-        self.play_pause_icon = "play"
+        pass
 
     def next(self):
-        mixer.music.stop()
+        self.pause()
         self.play_pause_icon = "pause"
         if self.running_songs.index(self.running_song) < len(self.running_songs)-1:
             self.running_song = self.running_songs[self.running_songs.index(self.running_song)+1]
             self.running_song_title = self.running_song.split("\\")[-1][:-4]
-            self.play()
+            Clock.schedule_once(self.play, 1)  
         else:
             if self.repeat_icon == "repeat":
                 self.running_song = self.running_songs[0]
                 self.running_song_title = self.running_song.split("\\")[-1][:-4]
-                self.play()
+                Clock.schedule_once(self.play, 1)  
 
             elif self.repeat_icon == "repeat-once":
                 if not self.repeated:
                     self.repeated = True
                     self.running_song = self.running_songs[0]
                     self.running_song_title = self.running_song.split("\\")[-1][:-4]
-                    self.play()
+                    Clock.schedule_once(self.play, 1)  
                 else:
                     self.play_pause_icon = "play"
                     Clock.unschedule(self.update_progress_bar)
@@ -909,11 +955,11 @@ class MedMusic(MDApp):
                 Clock.unschedule(self.update_left_time)
 
     def previous(self):
-        mixer.music.stop()
+        self.pause()
         self.play_pause_icon = "pause"
         self.running_song = self.running_songs[max(self.running_songs.index(self.running_song)-1, 0)]
         self.running_song_title = self.running_song.split("\\")[-1][:-4]
-        self.play()
+        Clock.schedule_once(self.play, 1)  
 
     def repeat(self):
         if self.repeat_icon == "repeat-off":
@@ -931,27 +977,31 @@ class MedMusic(MDApp):
     titles = []
 
     def collect_titles(self):
-        self.titles = os.listdir("Titles")
-        self.albums = os.listdir("Albums")
-        titles_file = JsonStore("Titles/Titles.json")
+        self.titles = os.listdir(self.current_working_dir + "\\Titles")
+        self.albums = os.listdir(self.current_working_dir + "\\Albums")
+        titles_file = JsonStore(self.current_working_dir + "\\Titles\\Titles.json")
         self.all_songs = []
         for album_file in self.albums:
-            json_file = JsonStore(f"Albums/{album_file}")
+            json_file = JsonStore(self.current_working_dir + f"\\Albums\\{album_file}")
             self.all_songs += [song_tuple[1]["path"] for song_tuple in json_file.find(type="song")]
         for song in self.all_songs:
             titles_file.put(song.split("\\")[-1][:-4], path=song, type="song")
 
     def create_list_titles(self):
+        self.current_data = []
+        self.snackbar_text = "Opening Titles ..."
+        self.open_snackbar()
         Clock.schedule_once(self.create_list_titles_callback, 1)
 
     def create_list_titles_callback(self, *args):
         self.current_playlist = "Titles"
         self.current_songs = self.all_songs
-        for title in self.all_songs:
-            if os.path.isfile(title):
-                self.root.ids.titles_box.add_widget(
-                    Title(title=title)
-                )
+        for song in self.current_songs:
+            if os.path.isfile(song):
+                self.current_data.append({
+                    'title': song.split("\\")[-1][:-4],
+                    'path' : song
+                    })
 #--------------------------------- CONVERTER FUNCTIONS -------------------------------------
     link = ''
     yt = None
@@ -961,26 +1011,30 @@ class MedMusic(MDApp):
 
     def convert_download_music(self):
         if self.convert_download_statue == "Convert":
+            self.link = self.root.ids.link_input.text
+            self.convert_download_statue = "Loading please wait..."
             self.convert_music()
 
         elif self.convert_download_statue == "Download":
             self.download_music()
 
     def convert_music(self):
-        self.link = self.root.ids.link_input.text
         try:
             self.yt = YouTube(self.link)
-            self.convert_download_statue = "Loading please wait..."
-            Clock.schedule_once(self.convert_music_callback, 1)
-        except:
-            self.snackbar_text = 'Video url is unavaialable, try again.'
+            Clock.schedule_once(self.convert_music_callback, 2)
+        except Exception as e:
+            self.snackbar_text = str(e)
             self.open_snackbar()
 
-    def convert_music_callback(self, x):
-        self.ys = self.yt.streams.filter(only_audio=True).first()
-        self.convert_download_statue = "Download"
-        self.snackbar_text = 'Video converted successfully!'
-        self.open_snackbar()
+    def convert_music_callback(self, *args):
+        try:
+            self.ys = self.yt.streams.filter(only_audio=True).first()
+            self.convert_download_statue = "Download"
+            self.snackbar_text = 'Video converted successfully!'
+        except Exception as e:
+            self.snackbar_text = str(e)
+        finally:
+            self.open_snackbar()
 
     def download_music(self):
         self.convert_download_statue = "Downloading..."
@@ -988,12 +1042,16 @@ class MedMusic(MDApp):
 
     def download_music_callback(self, x):
         try:
-            json_file = JsonStore("Albums/youtube.json")
-            out_file = self.ys.download("C:\\Users\\idris\\MedMusic\\Youtube")
+            json_file = JsonStore(self.current_working_dir + "\\Albums\\youtube.json")
+            out_file = self.ys.download(self.primary_ext_storage)
             base, ext = os.path.splitext(out_file)
             new_file = base + '.mp3'
             os.rename(out_file, new_file)
+            songs = json_file.find(type="song")
+            self.current_songs = [song_tuple[1]["path"] for song_tuple in songs]
             json_file.put(new_file.split("\\")[-1][:-4], path=new_file, type="song")
+            json_file.put("<image_key>", path='data\\Images\\default_image.jpg', type="image")
+            json_file.put("<infos>", songs_number=f"{len(self.current_songs) + 1}")
             self.convert_download_statue = "Convert"
             self.snackbar_text = "Download complete!"
         except FileExistsError:
@@ -1004,37 +1062,50 @@ class MedMusic(MDApp):
             self.snackbar_text = "Error"
         finally:
             self.open_snackbar()
+            self.collect_titles()
 
-class Playlist(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
-    playlist_image = StringProperty()
+class MusicPlayerWindows(object):
+    def __init__(self):
+        self.secs = 0
+        self.actualsong = ''
+        self.length = 0
+        self.sound_pos = 0
+        self.isplaying = False
+        self.sound = None
 
-class Add_Playlist_Dialog(BoxLayout):
-    pass
-class Rename_Playlist_Dialog(BoxLayout):
-    pass
+    def __del__(self):
+        if self.sound:
+            self.sound.unload()
 
-class Song(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
+    def load(self, filename):
+        self.__init__()
+        self.sound = SoundLoader.load(filename)    
+        if self.sound:
+            if self.sound.length != -1 :
+                self.length = self.sound.length
+                self.actualsong = filename
+                return True
+        return False
 
-class Add_Song_Dialog(BoxLayout):
-    pass
+    def unload(self):
+        if self.sound != None:
+            self.sound.unload()
+            self.__init__ # reset vars
 
-class SliverToolbar(MDTopAppBar):
-    pass
+    def play(self):
+        if self.sound:
+            self.sound.play()
+            self.isplaying = True
+            return self.length
 
-class MusicPlayer(MDCard):
-    pass
+    def stop(self):
+        self.isplaying = False
+        self.secs=0
+        if self.sound:
+            self.sound.stop()
 
-class ExpansedMusicPlayer(MDCard):
-    pass
-
-class Album(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
-    album_image = StringProperty()
-
-class Title(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
+    def seek(self, timepos_secs):
+        self.sound.seek(timepos_secs)
 
 if __name__== '__main__':
     MedMusic().run()
