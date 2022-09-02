@@ -1,43 +1,79 @@
-#--------------------------------------------------------------------------------
-# Bug in kivymd.uix.dialog.dialog.MDDialog class
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------
+#------------------------------------- LIBRARIES -------------------------------------------
+#-------------------------------------------------------------------------------------------
+
 import os
 import glob
-from mutagen.mp3 import MP3
 import webbrowser
+from pytube import YouTube  
 
 from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.utils import platform
+from kivy.core.window import Window
+from kivy.core.audio import SoundLoader
+from kivy.storage.jsonstore import JsonStore
 from kivy.properties import StringProperty, ObjectProperty, BooleanProperty, ListProperty
 
-from kivymd.uix.screen import MDScreen
-from kivy.uix.screenmanager import  Screen
-from kivymd.uix.behaviors import RoundedRectangularElevationBehavior
 from kivymd.uix.card import MDCard
+from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.snackbar import Snackbar
-from kivymd.uix.list import OneLineAvatarListItem, OneLineAvatarIconListItem
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.bottomsheet import MDListBottomSheet
 from kivymd.uix.filemanager import MDFileManager
+from kivymd.uix.behaviors import RoundedRectangularElevationBehavior
+from kivymd.uix.list import OneLineAvatarListItem, OneLineAvatarIconListItem
 
-from pytube import YouTube    
-from kivy.core.window import Window
+#-------------------------------------------------------------------------------------------
+#---------------------------------- GENERAL CLASSES ----------------------------------------
+#-------------------------------------------------------------------------------------------
+class MusicPlayerWindows(object):
+    def __init__(self):
+        self.secs = 0
+        self.actualsong = ''
+        self.length = 0
+        self.sound_pos = 0
+        self.isplaying = False
+        self.sound = None
 
-from kivy.storage.jsonstore import JsonStore
-from kivy.core.audio import SoundLoader
-from kivymd.uix.recycleview import MDRecycleView
+    def __del__(self):
+        if self.sound:
+            self.sound.unload()
 
-about_us = '''Hey ! I'm IDRISSI Ahmed a student engineer at ENSIAS Rabat.\n
-I made this app using Python and KivyMD. It allows you to add albums from your phone storage, \
-create your own playlists, play music and convert YouTube music to mp3 format. \n
-You can find the code source in my GitHub account. Enjoy it! \n'''
+    def load(self, filename):
+        self.__init__()
+        self.sound = SoundLoader.load(filename)    
+        if self.sound:
+            if self.sound.length != -1 :
+                self.length = self.sound.length
+                self.actualsong = filename
+                return True
+        return False
+
+    def unload(self):
+        if self.sound != None:
+            self.sound.unload()
+            self.__init__ # reset vars
+
+    def play(self):
+        if self.sound:
+            self.sound.play()
+            self.isplaying = True
+            return self.length
+
+    def stop(self):
+        self.isplaying = False
+        self.secs=0
+        if self.sound:
+            self.sound.stop()
+
+    def seek(self, timepos_secs):
+        self.sound.seek(timepos_secs)
 
 class AlbumsScreen(MDScreen):
     recycle_view = ObjectProperty(None)
@@ -116,19 +152,60 @@ class MusicPlayer(MDCard):
 class ExpansedMusicPlayer(MDCard):
     pass
 
+#-------------------------------------------------------------------------------------------
+#------------------------------------ MAIN CLASS -------------------------------------------
+#-------------------------------------------------------------------------------------------
+
 class MedMusic(MDApp):
+    toolbar_title = StringProperty() # Toolbar title of the current screen (except HomeScreen)
+    first_screen = StringProperty() # Last screen before opening the SongsScreen 
+    image = StringProperty() # Image of the playlist\\album in the SongsScreen
+    songs_number = StringProperty("0") # Songs number of the playlist\\album in the SongsScreen
 
-#--------------------------------- GENERAL FUNCTIONS ----------------------------------
-    toolbar_title = StringProperty() 
-    image = StringProperty() 
-    snackbar_text = ''
-    about_us_dialog = None
-    phone_number_dialog = None
-    first_screen = StringProperty()
+    current_data = ListProperty() #Widgets to display in the current screen
+    current_playlist = StringProperty() # Current playlist\\album to edit\\play
+    running_playlist = StringProperty() # Running playlist\\album
+    running_song_title = StringProperty() # Running song title
 
+    expansed_music_player = BooleanProperty(False) # Opened or closed ?
+    progress_bar_value = ObjectProperty(0) # Current value of the music player progress bar
+    play_pause_icon = StringProperty("play") # Play\\Pause icon of the music player
+    repeat_icon = StringProperty("repeat-off") # Repeat icon of the music player : off\\once\\many
+    left_time = StringProperty("00:00") # Left time of the music player
+    right_time = StringProperty("00:00") # Right time of the music player
+#--------------------------------- GENERAL FUNCTIONS ---------------------------------------
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.mplayer = MusicPlayerWindows()
+        self.mplayer = MusicPlayerWindows() # Music player for windows    
+        self.snackbar_text = '' # Message of the snackbar
+
+        self.about_us_dialog = None # Popup screen of about
+        self.phone_number_dialog = None # Popup screen of WhatsApp number
+        self.add_playlist_dialog = None # Popup screen to add a playlist
+        self.rename_playlist_dialog = None # Popup screen to rename a playlist
+        self.add_songs_dialog = None # Popup screen to add songs, it shows the available albums
+        self.choose_songs_dialog = None # Popup screen to choose songs to add
+
+        self.chosen_album = "" # name of the choosen album to add in AlbumsScreen
+        self.album_songs = [] # songs of the choosen album
+        self.choosen_image = "" # path of the choosen image to replace a playlist\\album's image
+        self.paths = [] # Paths of the songs to add in a playlist
+
+        self.current_songs = [] # Songs of the current playlist\\album to edit\\play
+        self.current_song = "" # Song to edit\\play
+        self.current_song_title = "" # Current song title 
+ 
+        self.running_songs = [] # Songs of the running playlist\\album 
+        self.running_song = "" # Running song
+
+        self.all_songs = [] # Songs from all available albums
+        self.titles = [] # All songs titles
+    
+        self.current_time = 0 # Current time of the running song
+        self.song_length = 1 # Running song length
+    
+        self.pause_pressed = False # Running song is paused ?
+        self.repeated = False # Running songs are repated ?
 
         if platform == "win":
             self.primary_ext_storage = "C:\\Users\\idris\\Desktop"
@@ -156,30 +233,7 @@ class MedMusic(MDApp):
             select_path=self.choose_image,
             preview=True,
         )
-
-    def request_user_permissions(self):
-        if platform == "android":
-            self.open_albums_file_manager()
-        else:
-            self.open_albums_file_manager()
-
-    def events(self, instance, keyboard, keycode, text, modifiers):
-        '''Called when buttons are pressed on the mobile device.'''
-
-        if keyboard in (1001, 27):
-            if self.albums_manager_open:
-                self.albums_file_manager.back()
-            elif self.images_manager_open:
-                self.images_file_manager.back()
-        if keyboard == 27:
-            if self.root.ids.screen_manager.current == "HomeScreen":
-                MDApp.get_running_app().stop()
-                Window.close()
-            else:
-                if not self.images_manager_open and not self.albums_manager_open:
-                    self.back(self.root.ids.screen_manager.current)
-        return True
-
+    
     def build(self):
         self.theme_cls.material_style = "M3"
         self.theme_cls.theme_style = "Light" 
@@ -189,97 +243,7 @@ class MedMusic(MDApp):
         self.theme_cls.theme_style_switch_animation = True
         self.theme_cls.theme_style_switch_animation_duration = 0.8
         return Builder.load_file("main.kv")
-
-    def switch_theme(self):
-        self.theme_cls.theme_style = (
-            "Dark" if self.theme_cls.theme_style == "Light" else "Light"
-        )
-
-    def open_settings(self):
-        bottom_sheet_menu = MDListBottomSheet() #radius=10, radius_from="top_right"
-        data = {
-            "About us": "badge-account-horizontal-outline",
-            "GitHub": "github",
-            "LinkedIn": "linkedin",
-            "Facebook": "facebook",
-            "Instagram": "instagram",
-            "WhatsApp": "whatsapp",
-            
-        }
-        for item in data.items():
-            bottom_sheet_menu.add_item(
-                item[0],
-                lambda x, y=item[0]: self.settings_callback(y),
-                icon=item[1],
-            )
-        bottom_sheet_menu.sheet_list.ids.box_sheet_list.padding = 0
-        bottom_sheet_menu.open()        
-
-    def settings_callback(self, item):
-        link = None 
-        if item == "About us":
-            if not self.about_us_dialog:
-                self.about_us_dialog = MDDialog(
-                    title="About us :",
-                    type="simple",
-                    text=about_us,
-                )
-            self.about_us_dialog.open()
-        elif item == "GitHub":
-            link = "https://github.com/ahmedidrissi/MedMusicApp"
-        elif item == "LinkedIn":
-            link = "https://www.linkedin.com/in/ahmed-idrissi-87508a249/"
-        elif item == "Facebook":
-            link = "https://www.facebook.com/Ahmed.Idrissi.2002/"
-        elif item == "Instagram":
-            link = "https://www.instagram.com/idrissi_ahmed02/"
-        elif item == "WhatsApp":
-            if not self.phone_number_dialog:
-                self.phone_number_dialog = MDDialog(
-                    title="WhatsApp :",
-                    type="simple",
-                    text="(+212)622406448 \n",
-                )
-            self.phone_number_dialog.open()
-        try:
-            webbrowser.open(link)
-        except Exception as e:
-            pass
-
-    def open_snackbar(self):
-        Snackbar(text=self.snackbar_text, 
-            snackbar_x="0dp",
-            snackbar_y="0dp",
-            size_hint_x=1,
-            size_hint_y=None,
-            height=dp(22)).open()
-
-    def open_images_file_manager(self):
-        self.images_file_manager.show(self.primary_ext_storage)
-        self.images_manager_open = True
-
-    def choose_image(self, path):
-        self.choosen_image = path
-        Clock.schedule_once(self.change_image_callback, 1)
-        self.exit_images_manager()
-
-    def change_image_callback(self, *args):
-        if self.root.ids.screen_manager.current == "PlaylistsScreen" or self.first_screen == "PlaylistsScreen":
-            json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
-            json_file.put("<image_key>", path=self.choosen_image, type="image")
-            self.create_playlists(1)
-        elif self.root.ids.screen_manager.current == "AlbumsScreen" or self.first_screen == "AlbumsScreen":
-            json_file = JsonStore(self.current_working_dir + f"\\Albums\\{self.current_playlist}.json")
-            json_file.put("<image_key>", path=self.choosen_image, type="image")
-            self.root.ids.albums_box.clear_widgets()
-            self.create_albums(1)
-        if self.root.ids.screen_manager.current == "SongsScreen":
-            self.image = self.choosen_image
-        
-    def exit_images_manager(self, *args):
-        self.images_manager_open = False
-        self.images_file_manager.close()
-
+    
     def on_start(self):
         folders = os.listdir(self.current_working_dir)
         if "com.medmusic" not in folders:
@@ -338,16 +302,127 @@ class MedMusic(MDApp):
         elif screen == "ConverterScreen":
             self.root.ids.screen_manager.current = "HomeScreen"
             self.root.ids.screen_manager.transition.direction = "right"
+    
+    def events(self, instance, keyboard, keycode, text, modifiers):
+        '''Called when buttons are pressed on the mobile device.'''
 
-#--------------------------------- ALBUMS FUNCTIONS ----------------------------------
-    albums = []
-    chosen_album = StringProperty("")
-    album_songs = []
+        if keyboard in (1001, 27):
+            if self.albums_manager_open:
+                self.albums_file_manager.back()
+            elif self.images_manager_open:
+                self.images_file_manager.back()
+        if keyboard == 27:
+            if self.root.ids.screen_manager.current == "HomeScreen":
+                MDApp.get_running_app().stop()
+                Window.close()
+            else:
+                if not self.images_manager_open and not self.albums_manager_open:
+                    self.back(self.root.ids.screen_manager.current)
+        return True
 
+    def switch_theme(self):
+        self.theme_cls.theme_style = (
+            "Dark" if self.theme_cls.theme_style == "Light" else "Light"
+        )
+ 
+    def request_user_permissions(self):
+        if platform == "android":
+            # Request permissions
+            self.open_albums_file_manager()
+        else:
+            self.open_albums_file_manager()
+
+    def open_settings(self):
+        bottom_sheet_menu = MDListBottomSheet()
+        data = {
+            "About us": "badge-account-horizontal-outline",
+            "GitHub": "github",
+            "LinkedIn": "linkedin",
+            "Facebook": "facebook",
+            "Instagram": "instagram",
+            "WhatsApp": "whatsapp", 
+        }
+        for item in data.items():
+            bottom_sheet_menu.add_item(
+                item[0],
+                lambda x, y=item[0]: self.settings_callback(y),
+                icon=item[1],
+            )
+        bottom_sheet_menu.sheet_list.ids.box_sheet_list.padding = 0
+        bottom_sheet_menu.open()        
+
+    def settings_callback(self, item):
+        link = None 
+        about_us = open("data/About_Us.txt", "r").read()
+        if item == "About us":
+            if not self.about_us_dialog:
+                self.about_us_dialog = MDDialog(
+                    title="About us :",
+                    type="simple",
+                    text=about_us,
+                )
+            self.about_us_dialog.open()
+        elif item == "WhatsApp":
+            if not self.phone_number_dialog:
+                self.phone_number_dialog = MDDialog(
+                    title="WhatsApp :",
+                    type="simple",
+                    text="(+212)622406448 \n",
+                )
+            self.phone_number_dialog.open()
+        elif item == "GitHub":
+            link = "https://github.com/ahmedidrissi/MedMusicApp"
+        elif item == "LinkedIn":
+            link = "https://www.linkedin.com/in/ahmed-idrissi-87508a249/"
+        elif item == "Facebook":
+            link = "https://www.facebook.com/Ahmed.Idrissi.2002/"
+        elif item == "Instagram":
+            link = "https://www.instagram.com/idrissi_ahmed02/"
+        
+        try:
+            webbrowser.open(link)
+        except Exception as e:
+            pass
+
+    def open_snackbar(self):
+        Snackbar(text=self.snackbar_text, 
+            snackbar_x="0dp",
+            snackbar_y="0dp",
+            size_hint_x=1,
+            size_hint_y=None,
+            height=dp(22)).open()
+
+    def open_images_file_manager(self):
+        self.images_file_manager.show(self.primary_ext_storage)
+        self.images_manager_open = True
+
+    def choose_image(self, path):
+        self.choosen_image = path
+        Clock.schedule_once(self.change_image_callback, 1)
+        self.exit_images_manager()
+
+    def change_image_callback(self, *args):
+        if self.root.ids.screen_manager.current == "PlaylistsScreen" or self.first_screen == "PlaylistsScreen":
+            json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.current_playlist}.json")
+            json_file.put("<image_key>", path=self.choosen_image, type="image")
+            self.create_playlists(1)
+        elif self.root.ids.screen_manager.current == "AlbumsScreen" or self.first_screen == "AlbumsScreen":
+            json_file = JsonStore(self.current_working_dir + f"\\Albums\\{self.current_playlist}.json")
+            json_file.put("<image_key>", path=self.choosen_image, type="image")
+            self.root.ids.albums_box.clear_widgets()
+            self.create_albums(1)
+        if self.root.ids.screen_manager.current == "SongsScreen":
+            self.image = self.choosen_image
+        
+    def exit_images_manager(self, *args):
+        self.images_manager_open = False
+        self.images_file_manager.close()
+
+#---------------------------------- ALBUMS FUNCTIONS ---------------------------------------
     def create_albums(self, *args):
-        self.albums = os.listdir(self.current_working_dir + "\\Albums")
+        albums = os.listdir(self.current_working_dir + "\\Albums")
         self.current_data = []
-        for album_file in self.albums:
+        for album_file in albums:
             json_file = JsonStore(self.current_working_dir + f"\\Albums\\{album_file}")
             self.current_data.append({
                 'title': album_file[:-5],
@@ -455,23 +530,16 @@ class MedMusic(MDApp):
             self.snackbar_text = text
             self.open_snackbar()
 
-#--------------------------------- PLAYLISTS FUNCTIONS ----------------------------------
-    playlists = []
-    current_playlist = StringProperty("")
-    running_playlist = StringProperty("")
-    add_playlist_dialog = None
-    rename_playlist_dialog = None
-    choosen_image = ""
-
+#-------------------------------- PLAYLISTS FUNCTIONS --------------------------------------
     def create_playlists(self, *args):
-        self.playlists = os.listdir(self.current_working_dir + "\\Playlists")   
-        if self.playlists != []:
-            self.running_playlist = self.playlists[0][:-5]
+        playlists = os.listdir(self.current_working_dir + "\\Playlists")   
+        if playlists != []:
+            self.running_playlist = playlists[0][:-5]
             playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.running_playlist}.json")
             playlist_songs_tuples = playlist_file.find(type="song")
             self.running_songs = [song_tuple[1]["path"] for song_tuple in playlist_songs_tuples]
             self.current_data = []
-            for playlist_file in self.playlists:
+            for playlist_file in playlists:
                 json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{playlist_file}")
                 self.current_data.append({
                     'title': playlist_file[:-5],
@@ -636,33 +704,7 @@ class MedMusic(MDApp):
             self.snackbar_text = "The name is too long"
             self.open_snackbar()
 
-#--------------------------------- SONGS FUNCTIONS ----------------------------------
-    running_songs = []
-    current_songs = []
-    songs_number = StringProperty("0")
-    running_song = StringProperty("")
-    running_song_title = StringProperty("")
-    current_song = StringProperty("")
-    current_song_title = StringProperty("")
-    song_length = 0
-    
-    expansed_music_player = BooleanProperty(False)
-    progress_bar_value = ObjectProperty(0)
-    left_time = StringProperty("00:00")
-    right_time = StringProperty("00:00")
-    current_time = 0
-    
-    play_pause_icon = StringProperty("play")
-    repeat_icon = StringProperty("repeat-off")
-    
-    pause_pressed = False
-    repeated = False
-    
-    add_songs_dialog = None
-    choose_songs_dialog = None
-    
-    current_data = ListProperty()
-
+#---------------------------------- SONGS FUNCTIONS ----------------------------------------
     def create_list_songs(self, *args):
         self.current_data = []
         for song in self.current_songs:
@@ -792,7 +834,6 @@ class MedMusic(MDApp):
             )
         self.choose_songs_dialog.open()
     
-    paths = []
     def checkbox_click(self, instance, active, title):
         if active == True:
             self.paths.append(title)
@@ -846,7 +887,7 @@ class MedMusic(MDApp):
             self.next()
 
     def update_right_time(self):
-        minutes = int(self.song_length/60)
+        minutes = int(self.song_length//60)
         seconds = int(self.song_length%60)
         if (len(str(minutes)) == 1) and (len(str(seconds)) == 1):
             self.right_time = f"0{minutes}:0{seconds}"
@@ -859,7 +900,7 @@ class MedMusic(MDApp):
 
     def update_left_time(self, *args):
         self.current_time = self.current_time + 1
-        minutes = int(self.current_time/60)
+        minutes = int(self.current_time//60)
         seconds = int(self.current_time%60)
         if (len(str(minutes)) == 1) and (len(str(seconds)) == 1):
             self.left_time = f"0{minutes}:0{seconds}"
@@ -972,9 +1013,7 @@ class MedMusic(MDApp):
         elif self.repeat_icon == "repeat-once":
             self.repeat_icon = "repeat-off"
 
-#--------------------------------- TITLES FUNCTIONS ----------------------------------
-    all_songs = []
-    titles = []
+#--------------------------------- TITLES FUNCTIONS ----------------------------------------
 
     def collect_titles(self):
         self.titles = os.listdir(self.current_working_dir + "\\Titles")
@@ -989,8 +1028,6 @@ class MedMusic(MDApp):
 
     def create_list_titles(self):
         self.current_data = []
-        self.snackbar_text = "Opening Titles ..."
-        self.open_snackbar()
         Clock.schedule_once(self.create_list_titles_callback, 1)
 
     def create_list_titles_callback(self, *args):
@@ -1002,7 +1039,8 @@ class MedMusic(MDApp):
                     'title': song.split("\\")[-1][:-4],
                     'path' : song
                     })
-#--------------------------------- CONVERTER FUNCTIONS -------------------------------------
+
+#-------------------------------- CONVERTER FUNCTIONS --------------------------------------
     link = ''
     yt = None
     ys = None
@@ -1040,10 +1078,10 @@ class MedMusic(MDApp):
         self.convert_download_statue = "Downloading..."
         Clock.schedule_once(self.download_music_callback, 8)
 
-    def download_music_callback(self, x):
+    def download_music_callback(self, *args):
         try:
             json_file = JsonStore(self.current_working_dir + "\\Albums\\youtube.json")
-            out_file = self.ys.download(self.primary_ext_storage)
+            out_file = self.ys.download(self.primary_ext_storage + "\\Download")
             base, ext = os.path.splitext(out_file)
             new_file = base + '.mp3'
             os.rename(out_file, new_file)
@@ -1063,49 +1101,6 @@ class MedMusic(MDApp):
         finally:
             self.open_snackbar()
             self.collect_titles()
-
-class MusicPlayerWindows(object):
-    def __init__(self):
-        self.secs = 0
-        self.actualsong = ''
-        self.length = 0
-        self.sound_pos = 0
-        self.isplaying = False
-        self.sound = None
-
-    def __del__(self):
-        if self.sound:
-            self.sound.unload()
-
-    def load(self, filename):
-        self.__init__()
-        self.sound = SoundLoader.load(filename)    
-        if self.sound:
-            if self.sound.length != -1 :
-                self.length = self.sound.length
-                self.actualsong = filename
-                return True
-        return False
-
-    def unload(self):
-        if self.sound != None:
-            self.sound.unload()
-            self.__init__ # reset vars
-
-    def play(self):
-        if self.sound:
-            self.sound.play()
-            self.isplaying = True
-            return self.length
-
-    def stop(self):
-        self.isplaying = False
-        self.secs=0
-        if self.sound:
-            self.sound.stop()
-
-    def seek(self, timepos_secs):
-        self.sound.seek(timepos_secs)
 
 if __name__== '__main__':
     MedMusic().run()
