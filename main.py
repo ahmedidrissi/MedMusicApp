@@ -299,6 +299,8 @@ class MedMusic(MDApp):
 #---------------------------------- ALBUMS FUNCTIONS ---------------------------------------
     def create_albums(self, *args):
         albums = os.listdir(self.current_working_dir + "\\Albums")
+        if self.running_playlist == '' and albums != []:
+            self.running_playlist == albums[0][:-5]
         self.current_data = []
         for album_file in albums:
             json_file = JsonStore(self.current_working_dir + f"\\Albums\\{album_file}")
@@ -307,10 +309,12 @@ class MedMusic(MDApp):
                 'album_image': json_file.get("<image_key>")["path"],
                 'songs_number': json_file.get("<infos>")["songs_number"]
                 })
+        self.root.ids.music_player.clear_widgets()
+        self.show_music_player()
 
     def show_album_bottom_sheet(self, album):
         self.current_playlist = album
-        bottom_sheet_menu = MDListBottomSheet() #radius=10, radius_from="top_right"
+        bottom_sheet_menu = MDListBottomSheet()
         data = {
             "Change the image": "image-edit-outline",
             "Remove the album": "trash-can-outline",
@@ -397,9 +401,11 @@ class MedMusic(MDApp):
             text = "Error"
         finally:
             if self.running_playlist == self.current_playlist:
+                self.pause()
                 self.running_playlist = ""
                 self.running_songs = []
-                self.stop()
+                self.running_song == ''
+                self.running_song_title == ''
                 self.root.ids.music_player.clear_widgets()
                 self.show_music_player()
             self.back("SongsScreen")
@@ -411,19 +417,16 @@ class MedMusic(MDApp):
 #-------------------------------- PLAYLISTS FUNCTIONS --------------------------------------
     def create_playlists(self, *args):
         playlists = os.listdir(self.current_working_dir + "\\Playlists")   
-        if playlists != []:
-            self.running_playlist = playlists[0][:-5]
-            playlist_file = JsonStore(self.current_working_dir + f"\\Playlists\\{self.running_playlist}.json")
-            playlist_songs_tuples = playlist_file.find(type="song")
-            self.running_songs = [song_tuple[1]["path"] for song_tuple in playlist_songs_tuples]
-            self.current_data = []
-            for playlist_file in playlists:
-                json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{playlist_file}")
-                self.current_data.append({
-                    'title': playlist_file[:-5],
-                    'playlist_image': json_file.get("<image_key>")["path"],
-                    'songs_number': json_file.get("<infos>")["songs_number"]
-                    })
+        self.current_data = []
+        for playlist_file in playlists:
+            json_file = JsonStore(self.current_working_dir + f"\\Playlists\\{playlist_file}")
+            self.current_data.append({
+                'title': playlist_file[:-5],
+                'playlist_image': json_file.get("<image_key>")["path"],
+                'songs_number': json_file.get("<infos>")["songs_number"]
+                })
+        self.root.ids.music_player.clear_widgets()
+        self.show_music_player()
         
     def show_playlist_bottom_sheet(self, playlist):
         self.current_playlist = playlist
@@ -527,9 +530,11 @@ class MedMusic(MDApp):
             text = "Error"
         finally:
             if self.running_playlist == self.current_playlist:
+                self.pause()
                 self.running_playlist = ""
                 self.running_songs = []
-                self.stop()
+                self.running_song == ''
+                self.running_song_title == ''
                 self.root.ids.music_player.clear_widgets()
                 self.show_music_player()
             self.back("SongsScreen")
@@ -814,6 +819,7 @@ class MedMusic(MDApp):
             Clock.schedule_interval(self.update_progress_bar, 1)
             Clock.schedule_interval(self.update_left_time, 1)
         except Exception as e:
+            self.play_pause_icon = "play"
             self.snackbar_text = str(e)
             file = open(self.current_working_dir + "\\errors.txt", "a")
             file.write(str(e)+"\n")
