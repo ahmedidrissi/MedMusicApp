@@ -551,7 +551,6 @@ MDScreen:
                             app.first_screen = "PlaylistsScreen"
                             app.snackbar_text = "Opening Playlists ..."
                             app.open_snackbar()
-                            app.show_music_player()
                             Clock.schedule_once(app.create_playlists, 1)
 
                     MDFillRoundFlatButton:
@@ -562,9 +561,8 @@ MDScreen:
                             root.ids.screen_manager.transition.direction = "left"
                             app.toolbar_title = "Albums"
                             app.first_screen = "AlbumsScreen"
-                            app.snackbar_text = "Opening Playlists ..."
+                            app.snackbar_text = "Opening Albums ..."
                             app.open_snackbar()
-                            app.show_music_player()
                             Clock.schedule_once(app.create_albums, 1)
 
                     MDFillRoundFlatButton:
@@ -665,7 +663,6 @@ MDScreen:
                                 group: "formats"
                                 size_hint_x: .2
 
-
                     MDFillRoundFlatButton:
                         text: app.convert_download_statue
                         size_hint: None, None
@@ -673,7 +670,3 @@ MDScreen:
                         on_release: app.convert_download_music()
 
                     MDLabel:
-
-#----------------------------------------------------------------------------------------------------------
-    
-        
