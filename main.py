@@ -6,6 +6,13 @@ import os
 import glob
 import webbrowser
 from pytube import YouTube  
+from pygame import mixer
+from mutagen.mp3 import MP3
+from mutagen.wave import WAVE
+import Albums
+import Playlists
+import Songs
+import Titles
 
 from kivy.lang import Builder
 from kivymd.app import MDApp
@@ -13,144 +20,15 @@ from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.utils import platform
 from kivy.core.window import Window
-from kivy.core.audio import SoundLoader
 from kivy.storage.jsonstore import JsonStore
 from kivy.properties import StringProperty, ObjectProperty, BooleanProperty, ListProperty
 
-from kivymd.uix.card import MDCard
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.snackbar import Snackbar
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.bottomsheet import MDListBottomSheet
 from kivymd.uix.filemanager import MDFileManager
-from kivymd.uix.behaviors import RoundedRectangularElevationBehavior
-from kivymd.uix.list import OneLineAvatarListItem, OneLineAvatarIconListItem
-
-#-------------------------------------------------------------------------------------------
-#---------------------------------- GENERAL CLASSES ----------------------------------------
-#-------------------------------------------------------------------------------------------
-class MusicPlayerWindows(object):
-    def __init__(self):
-        self.secs = 0
-        self.actualsong = ''
-        self.length = 0
-        self.sound_pos = 0
-        self.isplaying = False
-        self.sound = None
-
-    def __del__(self):
-        if self.sound:
-            self.sound.unload()
-
-    def load(self, filename):
-        self.__init__()
-        self.sound = SoundLoader.load(filename)    
-        if self.sound:
-            if self.sound.length != -1 :
-                self.length = self.sound.length
-                self.actualsong = filename
-                return True
-        return False
-
-    def unload(self):
-        if self.sound != None:
-            self.sound.unload()
-            self.__init__ # reset vars
-
-    def play(self):
-        if self.sound:
-            self.sound.play()
-            self.isplaying = True
-            return self.length
-
-    def stop(self):
-        self.isplaying = False
-        self.secs=0
-        if self.sound:
-            self.sound.stop()
-
-    def seek(self, timepos_secs):
-        self.sound.seek(timepos_secs)
-
-class AlbumsScreen(MDScreen):
-    recycle_view = ObjectProperty(None)
-    items_box = ObjectProperty(None)
-
-    def on_enter(self):
-        pass
-
-    def on_leave(self):
-        self.recycle_view.data = []
-
-class Album(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
-    album_image = StringProperty()
-    songs_number = StringProperty()
-
-class PlaylistsScreen(MDScreen):
-    recycle_view = ObjectProperty(None)
-    items_box = ObjectProperty(None)
-
-    def on_enter(self):
-        pass
-
-    def on_leave(self):
-        self.recycle_view.data = []
-
-class Playlist(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
-    playlist_image = StringProperty()
-    songs_number = StringProperty()
-
-class Add_Playlist_Dialog(MDBoxLayout):
-    pass
-
-class Rename_Playlist_Dialog(MDBoxLayout):
-    pass
-
-class SongsScreen(MDScreen):
-    recycle_view = ObjectProperty(None)
-    items_box = ObjectProperty(None)
-
-    def on_enter(self):
-        pass
-
-    def on_leave(self):
-        self.recycle_view.data = []
-    
-class Song(MDCard, RoundedRectangularElevationBehavior):
-    pass
-
-class Add_Song_Dialog(OneLineAvatarListItem):
-    divider = None
-    source = StringProperty()
-
-class Choose_Song_Dialog(OneLineAvatarIconListItem):
-    divider = None
-    path = StringProperty()
-
-class TitlesScreen(MDScreen):
-    recycle_view = ObjectProperty(None)
-    items_box = ObjectProperty(None)
-
-    def on_enter(self):
-        pass
-
-    def on_leave(self):
-        self.recycle_view.data = []
-        
-class Title(MDCard, RoundedRectangularElevationBehavior):
-    title = StringProperty()
-    path = StringProperty()
-
-class MusicPlayer(MDCard):
-    pass
-
-class ExpansedMusicPlayer(MDCard):
-    pass
 
 #-------------------------------------------------------------------------------------------
 #------------------------------------ MAIN CLASS -------------------------------------------
@@ -176,7 +54,7 @@ class MedMusic(MDApp):
 #--------------------------------- GENERAL FUNCTIONS ---------------------------------------
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.mplayer = MusicPlayerWindows() # Music player for windows    
+        mixer.init() # Initialize the pygame mixer
         self.snackbar_text = '' # Message of the snackbar
 
         self.about_us_dialog = None # Popup screen of about
@@ -597,7 +475,7 @@ class MedMusic(MDApp):
             self.add_playlist_dialog = MDDialog(
                 title="Add playlist :",
                 type="custom",
-                content_cls=Add_Playlist_Dialog(),
+                content_cls=Playlists.Add_Playlist_Dialog(),
                 buttons=[
                     MDFlatButton(
                         text="CANCEL",
@@ -664,7 +542,7 @@ class MedMusic(MDApp):
             self.rename_playlist_dialog = MDDialog(
                 title="Rename playlist :",
                 type="custom",
-                content_cls=Rename_Playlist_Dialog(),
+                content_cls=Playlists.Rename_Playlist_Dialog(),
                 buttons=[
                     MDFlatButton(
                         text="CANCEL",
@@ -722,7 +600,7 @@ class MedMusic(MDApp):
             self.root.ids.music_player.clear_widgets()
             self.root.ids.music_player.height = dp(67)
             self.root.ids.music_player.add_widget(
-                MusicPlayer()
+                Songs.MusicPlayer()
                 )
             self.expansed_music_player = False
         else:
@@ -743,7 +621,7 @@ class MedMusic(MDApp):
                 self.root.ids.music_player.clear_widgets()
                 self.root.ids.music_player.height = dp(67)
                 self.root.ids.music_player.add_widget(
-                    MusicPlayer()
+                    Songs.MusicPlayer()
                     )
                 self.expansed_music_player = False
 
@@ -752,7 +630,7 @@ class MedMusic(MDApp):
             self.root.ids.music_player.clear_widgets()
             self.root.ids.music_player.height = dp(180)
             self.root.ids.music_player.add_widget(
-                ExpansedMusicPlayer()
+                Songs.ExpansedMusicPlayer()
                 )
             self.expansed_music_player = True
             self.update_right_time()
@@ -790,7 +668,7 @@ class MedMusic(MDApp):
                 title="Add song :",
                 type="simple",
                 items=[
-                    Add_Song_Dialog(
+                    Songs.Add_Song_Dialog(
                         text = album_file[:-5],
                         source = list(x[1] for x in JsonStore(self.current_working_dir + f"\\Albums\\{album_file}").find(type="image"))[0]["path"],
                     ) for album_file in self.albums
@@ -812,7 +690,7 @@ class MedMusic(MDApp):
                 title="Choose songs :",
                 type="confirmation",
                 items=[
-                    Choose_Song_Dialog(
+                    Songs.Choose_Song_Dialog(
                         text = title.split("\\")[-1],
                         path = title
                     ) for title in self.album_songs if title not in self.current_songs
@@ -863,8 +741,7 @@ class MedMusic(MDApp):
 
     def set_song(self, song):
         try:
-            self.mplayer.stop()
-            self.mplayer.unload()
+            self.pause()
             self.running_playlist = self.current_playlist
             self.running_songs = self.current_songs
             self.running_song = song
@@ -872,6 +749,18 @@ class MedMusic(MDApp):
             Clock.schedule_once(self.play, 1)
         except Exception as e:
             self.snackbar_text = str(e)
+            self.open_snackbar()
+
+    def get_length(self):
+        try:
+            audio = MP3(self.running_song)
+            self.song_length = audio.info.length
+        except Exception:
+            audio = WAVE(self.running_song)
+            self.song_length = audio.info.length
+        except:
+            self.song_length = 0
+            self.snackbar_text = "Error"
             self.open_snackbar()
 
     def update_progress_bar(self, *args):
@@ -918,8 +807,9 @@ class MedMusic(MDApp):
             Clock.unschedule(self.update_left_time)
             self.progress_bar_value = 0
             self.current_time = 0
-            self.mplayer.load(self.running_song)
-            self.song_length = self.mplayer.play()
+            mixer.music.load(self.running_song)
+            self.get_length()
+            mixer.music.play()
             self.update_right_time()
             Clock.schedule_interval(self.update_progress_bar, 1)
             Clock.schedule_interval(self.update_left_time, 1)
@@ -933,7 +823,7 @@ class MedMusic(MDApp):
         try:
             self.play_pause_icon = "play"
             self.pause_pressed = True
-            self.mplayer.stop()
+            mixer.music.pause()
         except Exception as e:
             self.snackbar_text = str(e)
             self.open_snackbar()
@@ -945,8 +835,7 @@ class MedMusic(MDApp):
         try:
             self.pause_pressed = False
             self.play_pause_icon = "pause"
-            self.mplayer.play()
-            self.mplayer.seek(self.current_time)
+            mixer.music.unpause()
             Clock.schedule_interval(self.update_progress_bar, 1)
             Clock.schedule_interval(self.update_left_time, 1)
         except Exception as e:
@@ -961,9 +850,6 @@ class MedMusic(MDApp):
                 Clock.schedule_once(self.play, 1)      
         else:
             self.pause()
-        
-    def stop(self):
-        pass
 
     def next(self):
         self.pause()
