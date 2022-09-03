@@ -920,6 +920,7 @@ class MedMusic(MDApp):
 
     def create_list_titles(self):
         self.current_data = []
+        self.show_music_player()
         Clock.schedule_once(self.create_list_titles_callback, 1)
 
     def create_list_titles_callback(self, *args):
