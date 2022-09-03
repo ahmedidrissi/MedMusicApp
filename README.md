@@ -8,4 +8,3 @@
 
 # TODO
  Add shuffle mode
- Pause/Unpause music
